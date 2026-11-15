@@ -1,10 +1,7 @@
-
 import express from "express";
 import cors from "cors";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(cors());
 app.use(express.json());
 
@@ -12,35 +9,30 @@ app.get("/", (req, res) => {
   res.json({
     name: "SUPREME BRAIN AI",
     status: "online",
-    message: "Welcome to your own AI backend!"
+    message: "Welcome to your own AI backend!",
   });
 });
 
-app.get("/health", (req, res) => {
-  res.json({
-    success: true,
-    status: "healthy"
-  });
-});
-
-app.post("/api/chat", (req, res) => {
+app.post("/chat", async (req, res) => {
   const { message } = req.body;
-
-  if (!message || !message.trim()) {
-    return res.status(400).json({
-      success: false,
-      error: "Please enter a message."
-    });
+  try {
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: message }] }] }),
+      }
+    );
+    const data = await r.json();
+    const reply =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      data?.error?.message ||
+      "No reply";
+    res.json({ reply });
+  } catch (e) {
+    res.status(500).json({ reply: "Server error" });
   }
-
-  res.json({
-    success: true,
-    ai: "SUPREME BRAIN AI",
-    message: "Your message received successfully!",
-    received: message
-  });
 });
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`SUPREME BRAIN AI running on port ${PORT}`);
-});
+app.listen(process.env.PORT || 3000);
